@@ -90,11 +90,6 @@ def work_row_item_detail():
     df['end_time'] = pd.to_datetime(df['end_time']).dt.strftime('%Y-%m-%d %H:%M:%S')
     condition = df['work_procedure'] == '来料'
     df.loc[condition, ['start_time', 'end_time', 'time']] = ''
-    con = UseMySQL(sqlserver_config)
-    sql = f"select mainid process_id,zgs work_time from formtable_main_422_dt1 where gdhm='{work_row_item}'"
-    df1 = con.get_mssql_data(sql)
-    if not df1.empty:
-        df = pd.merge(df, df1, on='process_id', how='left')
     return jsonify(code=200, msg='success', data=df.fillna('').to_dict('records')), 200
 
 
@@ -110,11 +105,6 @@ def download():
           "left join work_examine C ON A.work_number = C.work_number AND B.work_row_item = C.work_row_item " \
           f"where A.work_number in ('{work_numbers}') ORDER BY work_row_item"
     df = con.get_mssql_data(sql)
-    work_row_items = "','".join(df['work_row_item'].unique())
-    con = UseMySQL(sqlserver_config)
-    sql = f"select mainid process_id,zgs work_time from formtable_main_422_dt1 where gdhm in ('{work_row_items}')"
-    df1 = con.get_mssql_data(sql)
-    df = pd.merge(df, df1, on='process_id', how='left')
     return jsonify(code=200, msg='success', data=df.fillna('').to_dict('records')), 200
 
 
@@ -222,9 +212,10 @@ def plan_search():
     else:
         work_row_item = []
         print_row_item = []
-    return jsonify(code=200, msg='成功', process_num=str(process_num), tooling_name=tooling_name,comp_numbers=comp_numbers,
-                   print_row_item=print_row_item,tooling_map=tooling_map, work_order_memo=work_order_memo,
-                   work_row_item=work_row_item,tooling_no=tooling_no,oa_id=oa_id, data=df2.to_dict('records')), 200
+    return jsonify(code=200, msg='成功', process_num=str(process_num), tooling_name=tooling_name,
+                   comp_numbers=comp_numbers,
+                   print_row_item=print_row_item, tooling_map=tooling_map, work_order_memo=work_order_memo,
+                   work_row_item=work_row_item, tooling_no=tooling_no, oa_id=oa_id, data=df2.to_dict('records')), 200
 
 
 def file_process(file):
@@ -505,21 +496,6 @@ def report_end():
     df['start_time'] = pd.to_datetime(df['start_time']).dt.strftime('%Y-%m-%d %H:%M:%S')
     df['end_time'] = pd.to_datetime(df['end_time']).dt.strftime('%Y-%m-%d %H:%M:%S')
     return jsonify(code=200, msg='操作成功', data=df.fillna('').to_dict('records')), 200
-
-
-@tooling_process.route('/report/oa', methods=['get'])
-def report_oa():
-    work_row_item = request.args.get('work_row_item')
-    number = request.args.get('number')
-    con = UseMySQL()
-    oa_con = UseMySQL(sqlserver_config)
-    sql = "select max(id) process_id from formtable_main_422"
-    process_id = oa_con.get_mssql_data(sql).iloc[0]['process_id']
-    sql = f"update work_report set process_id='{process_id}' where work_row_item='{work_row_item}' AND number='{number}'"
-    df = con.update_mssql_data(sql)
-    if df == 'fail':
-        return jsonify(code=404, msg='操作失败'), 404
-    return jsonify(code=200, msg='操作成功'), 200
 
 
 @tooling_process.route('/print/get', methods=['get'])
