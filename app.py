@@ -49,25 +49,6 @@ def login():
         return jsonify(code=401, msg='密码不正确')
 
 
-@app.route('/change_pswd', methods=['put'])
-@cross_origin(supports_credentials=True)
-def change_passwd():
-    """
-    更改用户的密码
-    :param: work_id: 工号
-    :param: password: 密码
-    :return: JSON
-    """
-    mysql_connect = UseMySQL()
-    data = json.loads(request.get_data())
-    sql = "update sys_user set password = '{}', has_login = {} where work_id = '{}';" \
-        .format(my_md5(str(data['password']), random_str), 1, data['work_id'])
-    df = mysql_connect.update_mssql_data(sql)
-    if df == 'success':
-        return jsonify(code=200, msg=df)
-    else:
-        return jsonify(code=404, msg="can't find resource")
-
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=6325)

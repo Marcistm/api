@@ -8,33 +8,8 @@ from lib.db import UseMySQL
 import urllib.parse
 from utils.common import find_file
 
-folder_path = 'address'
+folder_path = 'D:/map'
 tooling_process = Blueprint('tooling_process', __name__)
-
-
-@tooling_process.route('/report/pause', methods=['get'])
-def report_pause():
-    number = request.args.get('number')
-    work_row_item = request.args.get('work_row_item')
-    con = UseMySQL()
-    sql = "DECLARE @current_time DATETIME = GETDATE(); UPDATE work_report SET condition='已暂停'," \
-          "pause_time = @current_time," \
-          "time = time + IIF(pause_time IS NULL, DATEDIFF(second , start_time, @current_time)," \
-          "DATEDIFF(second , pause_time, @current_time)) " \
-          f"WHERE work_row_item='{work_row_item}' AND number='{number}' and condition='已开始'"
-    con.update_mssql_data(sql)
-    return jsonify(code=200, msg='success'), 200
-
-
-@tooling_process.route('/report/restart', methods=['get'])
-def report_restart():
-    number = request.args.get('number')
-    work_row_item = request.args.get('work_row_item')
-    sql = "UPDATE work_report SET condition='已开始',pause_time=getdate() " \
-          f"WHERE work_row_item='{work_row_item}' AND number='{number}'"
-    con = UseMySQL()
-    con.update_mssql_data(sql)
-    return jsonify(code=200, msg='success'), 200
 
 
 @tooling_process.route('/search', methods=['get'])
@@ -70,10 +45,6 @@ def search():
         df = df.sort_values(by='finish_time', ascending=False)
     if condition == '未完成':
         df = df[df['order_condition'].isnull()]
-    if condition == '技术完成':
-        df = df[df['order_condition'] == '技术完成']
-        df['work_procedure'] = '技术完成'
-        df = df.sort_values(by='finish_time', ascending=False)
     df.drop_duplicates(subset='work_row_item', keep='first', inplace=True)
     return jsonify(code=200, msg='success', data=df.fillna('').to_dict('records')), 200
 
@@ -108,75 +79,14 @@ def download():
     return jsonify(code=200, msg='success', data=df.fillna('').to_dict('records')), 200
 
 
-@tooling_process.route('/examine/search', methods=['get'])
-def examine_search():
-    con = UseMySQL()
-    sql = "SELECT t.work_row_memo,t.work_row_item,t.comp_numbers*a.process_num comp_numbers,t.sub_map,t.work_procedure," \
-          "t.number FROM work_report t inner join work_order a on a.work_number=t.work_number WHERE t.condition = '未检验'"
-    df = con.get_mssql_data(sql)
-    return jsonify(code=200, msg='success', data=df.fillna('').to_dict('records')), 200
-
-
-@tooling_process.route('/examine/finish', methods=['get'])
-def examine_finish():
-    number = request.args.get('number')
-    work_procedure = request.args.get('work_procedure')
-    work_row_item = request.args.get('work_row_item')
-    qualified_num = request.args.get('qualified_num')
-    unqualified_num = request.args.get('unqualified_num')
-    reuse_num = request.args.get('reuse_num')
-    rework_num = request.args.get('rework_num')
-    key_size = request.args.get('key_size')
-    work_number = request.args.get('work_number')
-    sql_insert = f"""INSERT INTO work_examine (work_row_item, qualified_num, unqualified_num, number, work_number,
-     key_size, rework_num, reuse_num,work_procedure) VALUES('{work_row_item}', '{qualified_num}', '{unqualified_num}', 
-    '{number}', '{work_number}','{key_size}','{rework_num}','{reuse_num}','{work_procedure}');"""
-    con = UseMySQL()
-    df = con.update_mssql_data(sql_insert)
-    if df == 'success':
-        sql = f"update work_report set condition='已结束' where number='{number}' and work_row_item='{work_row_item}'"
-        df = con.update_mssql_data(sql)
-        if df == 'fail':
-            return jsonify(code=404, msg='fail'), 404
-        sql = f"select count(1) result from work_report where condition!='已结束' and work_number='{work_number}'"
-        df = con.get_mssql_data(sql)
-        if df.iloc[0]['result'] == 0:
-            sql = f"update work_order set finish_time=getdate(),condition='已完成' where work_number='{work_number}'"
-            con.update_mssql_data(sql)
-        return jsonify(code=200, msg='success'), 200
-    else:
-        return jsonify(code=404, msg='fail'), 404
-
-
-@tooling_process.route('/report/tech_end', methods=['get'])
-def report_tech_end():
-    con = UseMySQL()
-    work_number = request.args.get('work_row_item')
-    sql = f"update work_report set condition='技术完成' where work_number='{work_number}' and condition!='已结束'"
-    df = con.update_mssql_data(sql)
-    if df == 'success':
-        sql = f"update work_order set finish_time=getdate(),condition='技术完成' where work_number='{work_number}'"
-        con.update_mssql_data(sql)
-        return jsonify(code=200, msg='success'), 200
-    else:
-        return jsonify(code=404, msg='fail'), 404
-
-
 def file_search(file, type):
     data = []
-    if type == '临时图纸':
-        for file_name in os.listdir(os.path.join(folder_path, type)):
-            if file in file_name:
-                if file_name.endswith('.pdf'):
-                    temp = file_name.rsplit('.', 1)[0]
+    for file_name in os.listdir(os.path.join(folder_path)):
+        if file in file_name:
+            for item in os.listdir(os.path.join(folder_path, file_name)):
+                if item.endswith('.pdf'):
+                    temp = item.rsplit('.', 1)[0]
                     data.append(temp)
-    else:
-        for file_name in os.listdir(os.path.join(folder_path)):
-            if file in file_name:
-                for item in os.listdir(os.path.join(folder_path, file_name)):
-                    if item.endswith('.pdf'):
-                        temp = item.rsplit('.', 1)[0]
-                        data.append(temp)
     data = list(set(data))
     df = pd.DataFrame(data, columns=['sub_map'])
     return df
@@ -241,10 +151,8 @@ def create():
             return jsonify(code=404, msg='未找到资源'), 404
         tooling_map = df.iloc[0]['tooling_map']
         type = df.iloc[0]['type']
-        if type == '临时图纸':
-            return jsonify(code=200, msg='成功', sub_map=tooling_map), 200
-        else:
-            file = tooling_map
+        file = tooling_map
+
     # 遍历目录中的所有文件和子文件夹
     if file:
         df = file_process(file)
@@ -253,54 +161,12 @@ def create():
     return jsonify(code=200, msg='成功', data=df.to_dict('records')), 200  # 返回数据，转换为字典列表格式
 
 
-@tooling_process.route('/preview', methods=['get'])
-def get_file_stream():
-    local_path = 'temp_paper.pdf'
-    map = urllib.parse.unquote(request.args.get('map'))
-    if '装配图' in map or '总装图' in map:
-        map += '-000'
-    map = map + '.pdf'
-    name = find_file(folder_path, map)
-    response = make_response(send_file(local_path))
-    response.headers.set('Content-Type', 'application/pdf')
-    response.headers.set('Content-Disposition', 'attachment', filename=local_path)
-    os.remove(local_path)
-    return response
-
-
-@tooling_process.route('/get_other_file', methods=['get'])
-def get_other_file():
-    def get_pdf_files(directory):
-        pdf_file_names = []
-        for root, directories, files in os.walk(directory):
-            for file in files:
-                if file.endswith(".pdf"):
-                    file_name = os.path.splitext(file)[0]
-                    pdf_file_names.append(file_name)
-        return pdf_file_names
-
-    map = request.args.get('map')
-    map += '-000.pdf'
-    map_path = find_file(folder_path, map)
-    parent_directory = os.path.dirname(map_path)
-    if parent_directory == '临时图纸':
-        related_pdfs = get_pdf_files(parent_directory)
-    else:
-        related_pdfs = []
-    return jsonify(code=200, msg='success', data=related_pdfs), 200
-
-
 @tooling_process.route('/search_version', methods=['GET'])
 def search_version():
-    type = request.args.get('type')
     data = []
-    if type == '正式图纸':
-        for item in os.listdir(folder_path):
-            if '-' in item:
-                data.append(item)
-    else:
-        df = file_process('临时图纸')
-        data = df['sub_map'].tolist()
+    for item in os.listdir(folder_path):
+        if '-' in item:
+            data.append(item)
     if data:
         return jsonify(code=200, data=data, msg='success'), 200
     else:
@@ -314,13 +180,6 @@ def generate_work_order_number():
     day = f'{now.day:02d}'
     return year + month + day
 
-
-def get_pdf_files_in_parent_directory(path):
-    parent_directory = os.path.dirname(path)
-    file_list = os.listdir(parent_directory)
-    pdf_files = [file for file in file_list if
-                 os.path.isfile(os.path.join(parent_directory, file)) and file.lower().endswith('.pdf')]
-    return pdf_files
 
 
 @tooling_process.route('/no_map', methods=['get'])
@@ -409,20 +268,6 @@ def work_row_item_get():
     return jsonify(code=200, msg='success', data=df.fillna('').to_dict('records')), 200
 
 
-@tooling_process.route('/work_row_item/history/get', methods=['get'])
-def work_row_item_history_get():
-    index = request.args.get('index')
-    tooling_no = request.args.get('tooling_no')
-    work_number = request.args.get('work_number')
-    sql = "SELECT a.work_procedure,a.work_memo FROM work_report a " \
-          "INNER JOIN work_order wo ON a.work_number = wo.work_number " \
-          f"WHERE wo.tooling_no = '{tooling_no}' AND a.work_row_item = (SELECT MAX(work_number) + '-{index}' " \
-          f"FROM work_order WHERE work_number < '{work_number}' AND tooling_no = '{tooling_no}') "
-    con = UseMySQL()
-    df = con.get_mssql_data(sql)
-    return jsonify(code=200, msg='success', data=df.fillna('').to_dict('records')), 200
-
-
 @tooling_process.route('/report/search', methods=['get'])
 def report_search():
     work_number = request.args.get('work_number')
@@ -502,31 +347,10 @@ def report_end():
 def print_get():
     con = UseMySQL()
     work_row_item = request.args.get('work_row_item')
-    sql = f"update work_report set is_print='已打印' where work_row_item='{work_row_item}' and is_print is null"
-    df = con.update_mssql_data(sql)
-    if df == 'fail':
-        return jsonify(code=404, msg='操作失败'), 404
     work_number = request.args.get('work_number')
     sql = f"select * from work_order where work_number='{work_number}' "
     df = con.get_mssql_data(sql)
     return jsonify(code=200, msg='success', data=df.fillna('').to_dict('records')), 200
-
-
-@tooling_process.route('/work_time/get', methods=['get'])
-def work_time_get():
-    index = (int(request.args.get('page')) - 1) * 9
-    process = request.args.get('tooling_process')
-    sql = "select tooling_process,work_time,work_type,work_process,part,rules from work_process_time "
-    if process:
-        sql = sql + f" where tooling_process like '%{process}%' "
-    sql = sql + f"order by id OFFSET {index} ROWS FETCH NEXT 9 ROWS ONLY"
-    con = UseMySQL()
-    df = con.get_mssql_data(sql)
-    sql = "select count(1) res from work_process_time"
-    if process:
-        sql = sql + f" where tooling_process like '%{process}%' "
-    total = int(con.get_mssql_data(sql).iloc[0]['res'])
-    return jsonify(code=200, msg='success', data=df.fillna('').to_dict('records'), total=total), 200
 
 
 @tooling_process.route('/reported/search', methods=['get'])
@@ -553,71 +377,3 @@ def reported_search():
     return jsonify(code=200, msg='success', data=df.fillna('').to_dict('records')), 200
 
 
-@tooling_process.route('/report/revoke', methods=['get'])
-def report_revoke():
-    work_row_item = request.args.get('work_row_item')
-    number = request.args.get('number')
-    condition = request.args.get('condition')
-    sql = f"update work_report set condition='未开始',time=0,start_time=null,end_time=null,pause_time=null,worker=null," \
-          f"process_id=null where work_row_item='{work_row_item}' and number={number}"
-    con = UseMySQL()
-    df = con.update_mssql_data(sql)
-    if df == 'fail':
-        return jsonify(code=404, msg='fail'), 404
-    if condition == '已结束':
-        sql = f"delete from work_examine where work_row_item='{work_row_item}' and number={number}"
-        df = con.update_mssql_data(sql)
-        if df == 'fail':
-            return jsonify(code=404, msg='fail'), 404
-    return jsonify(code=200, msg='success'), 200
-
-
-@tooling_process.route('/parts_tooling/get', methods=['get'])
-def parts_tooling_get():
-    sql = "select item,pjgzmc from parts_tooling"
-    con = UseMySQL()
-    df = con.get_mssql_data(sql)
-    return jsonify(code=200, msg='success', data=df.fillna('').to_dict('records')), 200
-
-
-@tooling_process.route('/purpose_equip/get', methods=['get'])
-def purpose_equip_get():
-    sql = "select item,ytsb from purpose_equip"
-    con = UseMySQL()
-    df = con.get_mssql_data(sql)
-    return jsonify(code=200, msg='success', data=df.fillna('').to_dict('records')), 200
-
-
-@tooling_process.route('/report/num', methods=['get'])
-def report_num():
-    scrap_num = request.args.get('scrap_num')
-    finish_num = request.args.get('finish_num')
-    number = request.args.get('number')
-    work_row_item = request.args.get('work_row_item')
-    sql = f"update work_report set scrap_num={scrap_num},finish_num={finish_num} " \
-          f"where work_row_item='{work_row_item}' and number={number}"
-    con = UseMySQL()
-    df = con.update_mssql_data(sql)
-    if df == 'fail':
-        return jsonify(code=404, msg='fail'), 404
-    return jsonify(code=200, msg='success'), 200
-
-
-@tooling_process.route('/examine/record', methods=['get'])
-def examine_record():
-    work_number = request.args.get('work_number')
-    con = UseMySQL()
-    sql = "SELECT e.work_row_item,e.qualified_num,e.unqualified_num,e.reuse_num,e.rework_num,t.work_row_memo," \
-          "t.sub_map,e.work_procedure,e.number,e.key_size FROM work_examine e inner join work_report t " \
-          f"on e.work_row_item=t.work_row_item WHERE e.work_procedure is not null and e.work_number='{work_number[:9]}'"
-    df = con.get_mssql_data(sql)
-    df['comp_numbers'] = df['qualified_num'] + df['unqualified_num'] + df['reuse_num'] + df['rework_num']
-    if len(work_number) > 9:
-        df = df[df['work_row_item'] == work_number]
-    work_procedure = request.args.get('work_procedure')
-    if work_procedure != '':
-        df = df[df['work_procedure'] == work_procedure]
-    df = df.drop_duplicates(subset=['work_row_item', 'number'])
-    df['ten'] = df['work_row_item'].str.slice(start=10).astype(int)
-    df = df.sort_values(by=['ten', 'number'])
-    return jsonify(code=200, msg='success', data=df.fillna('').to_dict('records')), 200
