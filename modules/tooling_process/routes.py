@@ -12,19 +12,6 @@ folder_path = 'D:/map'
 tooling_process = Blueprint('tooling_process', __name__)
 
 
-@tooling_process.route('/work_row_item/detail', methods=['get'])
-def work_row_item_detail():
-    work_row_item = request.args.get('work_row_item')
-    con = UseMySQL()
-    sql = "SELECT work_row_item,work_row_memo,number,work_procedure,work_memo,condition,worker,start_time," \
-          "process_id,end_time,time " \
-          f"FROM work_report WHERE work_row_item='{work_row_item}'"
-    df = con.get_mssql_data(sql)
-    df['start_time'] = pd.to_datetime(df['start_time']).dt.strftime('%Y-%m-%d %H:%M:%S')
-    df['end_time'] = pd.to_datetime(df['end_time']).dt.strftime('%Y-%m-%d %H:%M:%S')
-    condition = df['work_procedure'] == '来料'
-    df.loc[condition, ['start_time', 'end_time', 'time']] = ''
-    return jsonify(code=200, msg='success', data=df.fillna('').to_dict('records')), 200
 
 
 def file_search(file, type):
@@ -109,18 +96,6 @@ def create():
     return jsonify(code=200, msg='成功', data=df.to_dict('records')), 200  # 返回数据，转换为字典列表格式
 
 
-@tooling_process.route('/search_version', methods=['GET'])
-def search_version():
-    data = []
-    for item in os.listdir(folder_path):
-        if '-' in item:
-            data.append(item)
-    if data:
-        return jsonify(code=200, data=data, msg='success'), 200
-    else:
-        return jsonify(code=404, msg='未找到资源'), 404
-
-
 def generate_work_order_number():
     now = datetime.datetime.now()
     year = str(now.year)[-2:]
@@ -135,7 +110,6 @@ def tooling_map_submit():
     today = now.date()
     val = json.loads(request.get_data())
     header = pd.DataFrame(val['header'])
-    type = val['type']
     con = UseMySQL()
     if header.iloc[0]['work_number'] == '':
         sql = f"SELECT max(work_number) work_number FROM work_order WHERE CONVERT(date, create_time) = '{today}'"
@@ -168,40 +142,6 @@ def work_del():
         return jsonify(code=404, msg='删除失败'), 404
 
 
-@tooling_process.route('/work_procedure/get', methods=['get'])
-def work_procedure_get():
-    sql = "select work_name from work_procedure"
-    con = UseMySQL()
-    df = con.get_mssql_data(sql)
-    if df.empty:
-        return jsonify(code=404, msg='未找到资源'), 404
-    else:
-        return jsonify(code=200, msg='成功', data=df.to_dict('records')), 200
 
 
-@tooling_process.route('/work_procedure/save', methods=['post'])
-def work_procedure_save():
-    val = json.loads(request.get_data())
-    con = UseMySQL()
-    df = pd.DataFrame(val['data'])
-    if not df.empty:
-        df_unstart = df[df['condition'] == '未开始']
-        if not df_unstart.empty:
-            sql = f"delete from work_report where work_row_item='{df.iloc[0]['work_row_item']}' and condition='未开始'"
-            con.update_mssql_data(sql)
-            df_unstart = df_unstart.fillna('')
-            con.write_table('work_report', df_unstart)
-    else:
-        sql = f"delete from work_report where work_row_item='{val['work_row_item']}'"
-        con.update_mssql_data(sql)
-    return jsonify(code=200, msg='成功'), 200
 
-
-@tooling_process.route('/work_row_item/get', methods=['get'])
-def work_row_item_get():
-    work_row_item = request.args.get('work_row_item')
-    sql = "select work_procedure,work_memo,work_row_memo,condition,comp_numbers,sub_map from work_report " \
-          f"where work_row_item='{work_row_item}'"
-    con = UseMySQL()
-    df = con.get_mssql_data(sql)
-    return jsonify(code=200, msg='success', data=df.fillna('').to_dict('records')), 200
