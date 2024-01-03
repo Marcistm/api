@@ -12,43 +12,6 @@ folder_path = 'D:/map'
 tooling_process = Blueprint('tooling_process', __name__)
 
 
-@tooling_process.route('/search', methods=['get'])
-def search():
-    start = request.args.get('start')
-    condition = request.args.get('condition')
-    tooling_map = request.args.get('tooling_map')
-    tooling_no = request.args.get('tooling_no')
-    work_number = request.args.get('work_number')
-    con = UseMySQL()
-    sql = "SELECT distinct A.create_time,A.finish_time,A.work_number,A.work_order_memo,A.tooling_no,A.tooling_name," \
-          "A.process_num,B.work_row_item,A.condition order_condition,B.work_row_memo,B.sub_map," \
-          "A.process_num * B.comp_numbers AS process_comp_numbers,B.condition,COALESCE((" \
-          "SELECT top 1 B1.work_procedure FROM work_report B1 WHERE B1.work_row_item = B.work_row_item AND " \
-          "B1.condition != '已结束' ORDER BY B1.number ),CASE WHEN NOT EXISTS (SELECT 1 FROM work_examine C1 " \
-          "WHERE C1.work_row_item = B.work_row_item) THEN '检验' ELSE '工单完成' END) AS work_procedure,C.qualified_num," \
-          "C.unqualified_num FROM work_order A JOIN work_report B ON A.work_number = B.work_number LEFT JOIN " \
-          f"work_examine C ON B.work_row_item = C.work_row_item WHERE 1=1 "
-    if start:
-        end = request.args.get('end')
-        end = (datetime.datetime.strptime(end, "%Y-%m-%d") + datetime.timedelta(days=1)).strftime("%Y-%m-%d")
-        sql += f" AND A.create_time>='{start}' AND A.create_time<='{end}'"
-    if tooling_map:
-        sql += f" AND A.tooling_map='{tooling_map}'"
-    if tooling_no:
-        sql += f" AND A.tooling_no='{tooling_no}'"
-    if work_number:
-        sql += f" AND A.work_number='{work_number}'"
-    df = con.get_mssql_data(sql)
-    df = df.sort_values('work_number')
-    if condition == '完成':
-        df = df[df['order_condition'] == '已完成']
-        df = df.sort_values(by='finish_time', ascending=False)
-    if condition == '未完成':
-        df = df[df['order_condition'].isnull()]
-    df.drop_duplicates(subset='work_row_item', keep='first', inplace=True)
-    return jsonify(code=200, msg='success', data=df.fillna('').to_dict('records')), 200
-
-
 @tooling_process.route('/work_row_item/detail', methods=['get'])
 def work_row_item_detail():
     work_row_item = request.args.get('work_row_item')
@@ -61,21 +24,6 @@ def work_row_item_detail():
     df['end_time'] = pd.to_datetime(df['end_time']).dt.strftime('%Y-%m-%d %H:%M:%S')
     condition = df['work_procedure'] == '来料'
     df.loc[condition, ['start_time', 'end_time', 'time']] = ''
-    return jsonify(code=200, msg='success', data=df.fillna('').to_dict('records')), 200
-
-
-@tooling_process.route('/download', methods=['post'])
-def download():
-    val = json.loads(request.get_data())
-    work_numbers = val['work_numbers']
-    con = UseMySQL()
-    sql = "SELECT A.create_time, A.work_number, A.work_order_memo, A.tooling_no, A.tooling_name, A.process_num," \
-          "B.work_row_item, B.work_row_memo, B.sub_map, A.process_num * B.comp_numbers process_comp_numbers, B.number," \
-          "B.work_procedure, B.work_memo, B.condition, B.worker, B.start_time, B.end_time, B.time, C.qualified_num," \
-          "C.unqualified_num,B.process_id FROM work_order A INNER JOIN work_report B ON A.work_number = B.work_number " \
-          "left join work_examine C ON A.work_number = C.work_number AND B.work_row_item = C.work_row_item " \
-          f"where A.work_number in ('{work_numbers}') ORDER BY work_row_item"
-    df = con.get_mssql_data(sql)
     return jsonify(code=200, msg='success', data=df.fillna('').to_dict('records')), 200
 
 
@@ -181,15 +129,6 @@ def generate_work_order_number():
     return year + month + day
 
 
-
-@tooling_process.route('/no_map', methods=['get'])
-def no_map():
-    con = UseMySQL()
-    sql = f"SELECT distinct tooling_no,tooling_map FROM work_order "
-    df = con.get_mssql_data(sql)
-    return jsonify(code=200, msg='success', data=df.to_dict('records')), 200
-
-
 @tooling_process.route('/create/submit', methods=['post'])
 def tooling_map_submit():
     now = datetime.datetime.now()
@@ -266,114 +205,3 @@ def work_row_item_get():
     con = UseMySQL()
     df = con.get_mssql_data(sql)
     return jsonify(code=200, msg='success', data=df.fillna('').to_dict('records')), 200
-
-
-@tooling_process.route('/report/search', methods=['get'])
-def report_search():
-    work_number = request.args.get('work_number')
-    work_procedure = request.args.get('work_procedure')
-    worker = request.args.get('worker')
-    sql = "select a.start_time,b.work_number,b.work_order_memo,a.work_row_item,a.worker,a.number," \
-          "a.work_row_memo,a.condition,b.tooling_no,a.pause_time," \
-          "a.sub_map,a.work_procedure,a.work_memo,a.comp_numbers*b.process_num as process_num " \
-          "from work_report a inner join work_order b on a.work_number=b.work_number " \
-          f"where a.condition in ('未开始','已开始','已暂停','未检验') and a.work_number='{work_number[:9]}' "
-    con = UseMySQL()
-    df = con.get_mssql_data(sql)
-    # 根据 work_row_item 进行分组，并保留每个分组中 number 最小的行
-    df_min = df.groupby('work_row_item')['number'].idxmin()
-    # 根据索引获取保留的行
-    df = df.loc[df_min]
-    length = len(df)
-    if len(work_number) > 9:
-        df = df[df['work_row_item'] == work_number]
-    df['tag'] = False
-    if '装配' in df['work_procedure'].values and length > 1:
-        df.loc[df['work_procedure'] == '装配', 'tag'] = True
-    if work_procedure != '':
-        df = df[df['work_procedure'] == work_procedure]
-    df = df[df['condition'] != '未检验']
-    df = df.loc[(df['worker'] == worker) | (df['worker'].isnull())]
-    df['start_time'] = pd.to_datetime(df['start_time']).dt.strftime('%Y-%m-%d %H:%M:%S')
-    df['pause_time'] = pd.to_datetime(df['pause_time']).dt.strftime('%Y-%m-%d %H:%M:%S')
-    return jsonify(code=200, msg='success', data=df.fillna('').to_dict('records')), 200
-
-
-@tooling_process.route('/report/start', methods=['get'])
-def report_start():
-    con = UseMySQL()
-    work_row_item = request.args.get('work_row_item')
-    number = request.args.get('number')
-    sql = f"select worker from work_report where work_row_item='{work_row_item}' and number={number}"
-    df = con.get_mssql_data(sql)
-    if df.iloc[0]['worker'] is not None:
-        return jsonify(code=200, msg='已被他人抢单'), 200
-    worker = request.args.get('worker')
-    sql = f"update work_report set condition='已开始',start_time=getdate(),worker='{worker}' " \
-          f"where work_row_item='{work_row_item}' and number={number}"
-    con.update_mssql_data(sql)
-    return jsonify(code=200, msg='操作成功'), 200
-
-
-@tooling_process.route('/report/end', methods=['get'])
-def report_end():
-    work_row_item = request.args.get('work_row_item')
-    number = request.args.get('number')
-    con = UseMySQL()
-    work_procedure = request.args.get('work_procedure')
-    condition = '未检验'
-    if work_procedure == '来料':
-        condition = '已结束'
-    sql = f"select count(1) result from work_report where work_row_item='{work_row_item}' and number='{number}' and " \
-          "end_time is not null"
-    df = con.get_mssql_data(sql)
-    if df.iloc[0]['result'] > 0:
-        return jsonify(code=404, msg='已结束'), 404
-    sql = f"DECLARE @current_time DATETIME = GETDATE(); UPDATE work_report SET condition='{condition}'," \
-          f"end_time = @current_time," \
-          f"time = time + IIF(pause_time IS NULL, DATEDIFF(second , start_time, @current_time)," \
-          "DATEDIFF(second , pause_time, @current_time)) " \
-          f"WHERE work_row_item='{work_row_item}' AND number='{number}'"
-    con.update_mssql_data(sql)
-    sql = "select ROUND(time / 60.0, 2) AS divide_time,start_time,end_time,sub_map,work_row_item,work_procedure " \
-          f"from work_report where work_row_item='{work_row_item}' and number='{number}'"
-    df = con.get_mssql_data(sql)
-    df['start_time'] = pd.to_datetime(df['start_time']).dt.strftime('%Y-%m-%d %H:%M:%S')
-    df['end_time'] = pd.to_datetime(df['end_time']).dt.strftime('%Y-%m-%d %H:%M:%S')
-    return jsonify(code=200, msg='操作成功', data=df.fillna('').to_dict('records')), 200
-
-
-@tooling_process.route('/print/get', methods=['get'])
-def print_get():
-    con = UseMySQL()
-    work_row_item = request.args.get('work_row_item')
-    work_number = request.args.get('work_number')
-    sql = f"select * from work_order where work_number='{work_number}' "
-    df = con.get_mssql_data(sql)
-    return jsonify(code=200, msg='success', data=df.fillna('').to_dict('records')), 200
-
-
-@tooling_process.route('/reported/search', methods=['get'])
-def reported_search():
-    work_number = request.args.get('work_number')
-    work_procedure = request.args.get('work_procedure')
-    sql = "select a.start_time,b.work_number,b.work_order_memo,a.work_row_item,a.worker,a.number," \
-          "a.work_row_memo,a.condition,b.tooling_no,a.end_time," \
-          "a.sub_map,a.work_procedure,a.work_memo,a.comp_numbers*b.process_num as process_num " \
-          "from work_report a inner join work_order b on a.work_number=b.work_number " \
-          f"where a.condition in ('已结束','未检验','已开始','已暂停') and a.work_number='{work_number[:9]}'"
-    con = UseMySQL()
-    df = con.get_mssql_data(sql)
-    # 根据 work_row_item 进行分组，并保留每个分组中 number 最小的行
-    df_max = df.groupby('work_row_item')['number'].idxmax()
-    # 根据索引获取保留的行
-    df = df.loc[df_max]
-    if len(work_number) > 9:
-        df = df[df['work_row_item'] == work_number]
-    if work_procedure != '':
-        df = df[df['work_procedure'] == work_procedure]
-    df['start_time'] = pd.to_datetime(df['start_time']).dt.strftime('%Y-%m-%d %H:%M:%S')
-    df['end_time'] = pd.to_datetime(df['end_time']).dt.strftime('%Y-%m-%d %H:%M:%S')
-    return jsonify(code=200, msg='success', data=df.fillna('').to_dict('records')), 200
-
-
