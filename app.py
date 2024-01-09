@@ -20,11 +20,14 @@ def generate_work_order_number():
     return year + month + day
 
 
-@app.route('/create', methods=['post'])
+@app.route('/create', methods=['get'])
 def create():
-    val = json.loads(request.get_data())
-    item = val['item']
-    remark = val['remark']
+    item = request.args.get('item')
+    if item is None:
+        item=''
+    remark = request.args.get('remark')
+    if remark is None:
+        remark=''
     all_keys = redis_client.keys('*')
     if all_keys:
         work_number = str(int(max(all_keys)) + 1)
@@ -37,7 +40,7 @@ def create():
 
 @app.route('/search', methods=['get'])
 def search():
-    work_number = request.args.get('work_number')
+    work_number = request.args.get('item_number')
     data = []
     if work_number:
         all_keys = redis_client.keys(work_number)
@@ -55,8 +58,16 @@ def search():
 @app.route('/update', methods=['get'])
 def update():
     item_number = request.args.get('item_number')
+    if item_number is None:
+        return jsonify(code=400, msg='item_number is required'), 400
+    if not redis_client.exists(item_number):
+        return jsonify(code=404, msg=f'Item number {item_number} not found'), 404
     remark = request.args.get('remark')
+    if remark is None:
+        remark=''
     item = request.args.get('item')
+    if item is None:
+        item=''
     redis_client.lset(item_number, 0, item)
     redis_client.lset(item_number, 1, remark)
     return jsonify(code=200, msg='success'), 200
@@ -64,9 +75,13 @@ def update():
 
 @app.route('/del', methods=['GET'])
 def work_del():
-    work_number = request.args.get('work_number')
-    redis_client.delete(work_number)
-    return jsonify(code=200, msg='删除成功'), 200
+    item_number = request.args.get('item_number')
+    if item_number is None:
+        return jsonify(code=400, msg='item_number is required'), 400
+    if not redis_client.exists(item_number):
+        return jsonify(code=404, msg=f'Item number {item_number} not found'), 404
+    redis_client.delete(item_number)
+    return jsonify(code=200, msg='delete success'), 200
 
 
 if __name__ == '__main__':
