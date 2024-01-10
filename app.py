@@ -20,12 +20,12 @@ def generate_work_order_number():
     return year + month + day
 
 
-@app.route('/create', methods=['get'])
+@app.route('/create', methods=['post'])
 def create():
-    item = request.args.get('item')
+    item = request.json.get('item')
     if item is None:
         item=''
-    remark = request.args.get('remark')
+    remark = request.json.get('remark')
     if remark is None:
         remark=''
     all_keys = redis_client.keys('*')
@@ -55,7 +55,7 @@ def search():
     return jsonify(code=200, msg='success', data=data), 200
 
 
-@app.route('/update', methods=['get'])
+@app.route('/update', methods=['put'])
 def update():
     item_number = request.args.get('item_number')
     if item_number is None:
@@ -73,8 +73,8 @@ def update():
     return jsonify(code=200, msg='success'), 200
 
 
-@app.route('/del', methods=['GET'])
-def work_del():
+@app.route('/del', methods=['delete'])
+def delete():
     item_number = request.args.get('item_number')
     if item_number is None:
         return jsonify(code=400, msg='item_number is required'), 400
