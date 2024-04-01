@@ -9,8 +9,8 @@ class UseMySQL(object):
             config = {
                 'host': '127.0.0.1',
                 'user': 'root',
-                'password': '123456',
-                'db': 'tooling_process',
+                'password': '12345678',
+                'db': 'nba',
                 'port': 3306,
             }
         self.config = config
