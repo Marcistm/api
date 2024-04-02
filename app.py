@@ -6,11 +6,9 @@ from flask import Flask, jsonify, request
 from flask_cors import cross_origin, CORS
 
 from lib.db import UseMySQL
-from modules.tooling_process.routes import tooling_process
 from utils.common import generate_token, my_md5
 
 app = Flask(__name__)
-app.register_blueprint(tooling_process, url_prefix='/tooling_process')
 random_str = 'hytek20@0_solt~%!$#^&*'  # 加密 盐
 CORS(app, resources={r"/*": {"origins": "*"}})
 pd.set_option('display.max_columns', None)
