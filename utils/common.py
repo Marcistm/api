@@ -6,8 +6,6 @@ import hashlib
 from datetime import datetime, timedelta, date
 from re import search, I
 
-import PyPDF2
-
 
 class RegexMap:
     def __init__(self, n_dic, val):
@@ -21,21 +19,6 @@ class RegexMap:
         return self.__val
 
 
-def merge_pdfs(file_list, output_filename):
-    pdf_merger = PyPDF2.PdfFileMerger()
-
-    try:
-        # Add each PDF to the merger
-        for pdf_file in file_list:
-            pdf_merger.append(pdf_file)
-
-        # Write the merged PDF to the output file
-        with open(output_filename, 'wb') as output_file:
-            pdf_merger.write(output_file)
-
-        print(f"PDFs successfully merged into {output_filename}")
-    except Exception as e:
-        print(f"Error: {e}")
 
 
 def write_base64_file(decoded_file_name, base64_string):
@@ -43,18 +26,6 @@ def write_base64_file(decoded_file_name, base64_string):
         f.write(base64.b64decode(base64_string))
 
 
-def write_and_merge_base64_file(decoded_file_name, base64_string_list):
-    if len(base64_string_list) > 1:
-        del_file_list = list()
-        for index, base64_string in enumerate(base64_string_list):
-            temp_file_name = decoded_file_name[:-4] + str(index) + decoded_file_name[-4:]
-            write_base64_file(temp_file_name, base64_string)
-            del_file_list.append(temp_file_name)
-        merge_pdfs(del_file_list, decoded_file_name)
-        for filename in del_file_list:
-            os.remove(filename)
-    else:
-        write_base64_file(decoded_file_name, base64_string_list[0])
 
 
 def generate_token(key, expire=3600):

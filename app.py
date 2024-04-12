@@ -4,8 +4,11 @@ import pandas as pd
 import requests
 from flask import Flask, jsonify, request
 from flask_cors import cross_origin, CORS
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
 
 from lib.db import UseMySQL
+from modules.game.route import game
 from utils.common import generate_token, my_md5
 
 app = Flask(__name__)
@@ -14,6 +17,8 @@ CORS(app, resources={r"/*": {"origins": "*"}})
 pd.set_option('display.max_columns', None)
 pd.set_option('display.width', None)
 pd.set_option('display.max_rows', None)
+
+app.register_blueprint(game, url_prefix='/game')
 
 
 @app.route('/login', methods=['get'])
