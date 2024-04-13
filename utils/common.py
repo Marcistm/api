@@ -127,37 +127,6 @@ def split_file_name(file_name):
     return name, ext
 
 
-def add_version(file_name):
-    """文件名加版本1.0"""
-    name, ext = split_file_name(file_name)
-    if name.endswith('-S1.0'):
-        return file_name
-    else:
-        try:
-            float(name.split('-S')[-1])
-        except:
-            name += '-S1.0'
-        else:
-            if len(name.split('-S')[-1].split('.')) != 2:
-                name += '-S1.0'
-            else:
-                name = '-S'.join(name.split('-S')[:-1] + ['1.0'])
-        return name + ext
-
-
-def update_version(file_name):
-    """修改版本"""
-    name, ext = split_file_name(file_name)
-    try:
-        bb1, bb2 = name.split('-S')[-1].split('.')
-        bb2 = int(bb2) + 1
-        if bb2 > 3:
-            bb1 = int(bb1) + 1
-            bb2 = 0
-        name = '-S'.join(name.split('-S')[:-1] + [f"{bb1}.{bb2}"])
-    except:
-        name += '-S1.0'
-    return name + ext
 
 
 import shutil

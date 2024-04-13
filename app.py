@@ -1,15 +1,13 @@
 import json
-import numpy as np
 import pandas as pd
-import requests
 from flask import Flask, jsonify, request
 from flask_cors import cross_origin, CORS
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
 
 from lib.db import UseMySQL
-from modules.game.route import game
-from utils.common import generate_token, my_md5
+from modules.evaluate import evaluate
+
+from modules.game import game
+from utils.common import generate_token, my_md5, construct_update_statement
 
 app = Flask(__name__)
 random_str = 'hytek20@0_solt~%!$#^&*'  # 加密 盐
@@ -19,6 +17,7 @@ pd.set_option('display.width', None)
 pd.set_option('display.max_rows', None)
 
 app.register_blueprint(game, url_prefix='/game')
+app.register_blueprint(evaluate, url_prefix='/evaluate')
 
 
 @app.route('/login', methods=['get'])
@@ -56,6 +55,29 @@ def change_passwd():
         return jsonify(code=200, msg=df)
     else:
         return jsonify(code=404, msg="can't find resource")
+
+
+@app.route('/delete', methods=['get'])
+def delete():
+    id = request.args.get('id')
+    table = request.args.get('table')
+    con = UseMySQL()
+    sql = f"delete from {table} where id='{id}'"
+    df = con.update_mssql_data(sql)
+    if df == 'fail':
+        return jsonify(code=404, msg='error'), 404
+    return jsonify(code=200, msg='success'), 200
+
+
+@app.route('/save', methods=['post'])
+def save():
+    val = json.loads(request.get_data())
+    sql = construct_update_statement(val['table'],val['row'])
+    con = UseMySQL()
+    df = con.update_mssql_data(sql)
+    if df == 'fail':
+        return jsonify(code=404, msg='error'), 404
+    return jsonify(code=200, msg='success'), 200
 
 
 if __name__ == '__main__':
