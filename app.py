@@ -7,6 +7,7 @@ from lib.db import UseMySQL
 from modules.evaluate import evaluate
 
 from modules.game import game
+from modules.rank import rank
 from utils.common import generate_token, my_md5, construct_update_statement
 
 app = Flask(__name__)
@@ -15,7 +16,7 @@ CORS(app, resources={r"/*": {"origins": "*"}})
 pd.set_option('display.max_columns', None)
 pd.set_option('display.width', None)
 pd.set_option('display.max_rows', None)
-
+app.register_blueprint(rank, url_prefix='/rank')
 app.register_blueprint(game, url_prefix='/game')
 app.register_blueprint(evaluate, url_prefix='/evaluate')
 

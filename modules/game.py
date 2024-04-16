@@ -5,6 +5,7 @@ from dateutil import parser
 from flask import Blueprint, request, jsonify
 from nba_api.live.nba.endpoints import scoreboard, boxscore
 
+from config import proxy, headers
 from lib.db import UseMySQL
 
 game = Blueprint('game', __name__)
@@ -12,7 +13,7 @@ game = Blueprint('game', __name__)
 
 @game.route('/search', methods=['get'])
 def search():
-    board = scoreboard.ScoreBoard()
+    board = scoreboard.ScoreBoard(proxy=proxy)
     games = board.games.get_dict()
     data = []
     for game in games:
@@ -26,6 +27,7 @@ def search():
             'gameTimeLTZ': gameTimeLTZ
         }
         data.append(dic)
+    print(data)
     return jsonify(code=200, msg='success', data=data)
 
 
@@ -34,7 +36,8 @@ def detail():
     data = []
     gameId = request.args.get('gameId')
     type = request.args.get('type')
-    box = boxscore.BoxScore(gameId)
+    print(type)
+    box = boxscore.BoxScore(game_id=gameId, proxy=proxy,headers=headers)
     players = box.home_team_player_stats.get_dict() if type == 'home' else box.away_team_player_stats.get_dict()
     con = UseMySQL()
     for player in players:
