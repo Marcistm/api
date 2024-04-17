@@ -1,30 +1,30 @@
-from nba_api.live.nba.endpoints import boxscore
-from nba_api.stats.endpoints import ScoreboardV2, LeagueGameFinder
 from datetime import datetime
+from nba_api.stats.endpoints import ScoreboardV2
 
-# Function to retrieve schedule for a specific date
 from config import proxy
 
 
-def get_schedule(date):
-    scoreboard = ScoreboardV2(game_date=date,proxy=proxy)
-    print(scoreboard.get_dict())
-    games = scoreboard.get_normalized_dict()["GameHeader"]
-    schedule = []
-    print(games)
-    game_finder = LeagueGameFinder(proxy=proxy)
-    game_finder.get_json()
-    gamess = game_finder.get_data_frames()[0]
-    for game in games:
-        game_details = gamess[gamess['GAME_ID'] == game['GAME_ID']]
-        print(game_details)
-        print(game_details['MATCHUP'].values[0].split(' vs ')[1])
-    return schedule
+def get_game_schedule(date):
+    formatted_date = datetime.strftime(date, "%m/%d/%Y")
+    data = []
+    scoreboard = ScoreboardV2(game_date=formatted_date,proxy=proxy)
+    games = scoreboard.get_dict()['resultSets'][1]['rowSet']
+    for i in range(0,len(games),2):
+        dic = {
+            'gameId': games[i][2],
+            'awayTeam': games[i+1][6],
+            'homeTeam': games[i][6],
+            'awayTeamScore': games[i+1][18] if games[i+1][18] is not None else '',
+            'homeTeamScore': games[i][18] if games[i][18] is not None else '',
+            'gameTimeLTZ': games[i][0]
+        }
+        data.append(dic)
+    return data
 
-# Example usage
-date = datetime(2024, 4, 14)
-schedule = get_schedule(date)
 
-# Display schedule
-print("Schedule for", date.strftime("%Y-%m-%d"))
+# 指定要查询的日期
+date_to_query = datetime(2024, 4, 17)  # 示例日期，你需要替换为你要查询的日期
 
+# 获取指定日期的比赛赛程
+schedule = get_game_schedule(date_to_query)
+print(schedule)

@@ -19,15 +19,6 @@ class RegexMap:
         return self.__val
 
 
-
-
-def write_base64_file(decoded_file_name, base64_string):
-    with open(decoded_file_name, 'wb') as f:
-        f.write(base64.b64decode(base64_string))
-
-
-
-
 def generate_token(key, expire=3600):
     """
     :param key: 用户给定的用于生成token的key
@@ -125,8 +116,6 @@ def split_file_name(file_name):
     """拆分文件名和后缀"""
     name, ext = os.path.splitext(file_name)
     return name, ext
-
-
 
 
 import shutil

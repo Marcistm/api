@@ -32,4 +32,22 @@ def search():
     df['time'] = df['time'].dt.strftime('%Y-%m-%d %H:%M:%S')
     if df.empty:
         return jsonify(code=404, msg='error')
-    return jsonify(code=200, msg='success',data=df.fillna('').to_dict('records'))
+    return jsonify(code=200, msg='success', data=df.fillna('').to_dict('records'))
+
+
+def stats_row(row, con):
+    sql = f"select category from evaluate_stats where evaluateId='{row['id']}'"
+    df = con.get_mssql_data(sql)
+    return row
+
+
+@evaluate.route('/player/comment/search', methods=['get'])
+def plater_comment_search():
+    gameId = request.args.get('gameId')
+    name = request.args.get('player').replace('\'', '\'\'')
+    sql = f"select * from evaluate where gameId='{gameId}' and name='{name}'"
+    con = UseMySQL()
+    df = con.get_mssql_data(sql)
+    df.apply(stats_row, args=con, axis=1)
+    df['time'] = df['time'].dt.strftime('%Y-%m-%d %H:%M:%S')
+    return jsonify(code=200, msg='success', data=df.fillna('').to_dict('records'))

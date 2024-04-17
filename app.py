@@ -4,6 +4,7 @@ from flask import Flask, jsonify, request
 from flask_cors import cross_origin, CORS
 
 from lib.db import UseMySQL
+from modules import report
 from modules.evaluate import evaluate
 
 from modules.game import game
@@ -19,6 +20,7 @@ pd.set_option('display.max_rows', None)
 app.register_blueprint(rank, url_prefix='/rank')
 app.register_blueprint(game, url_prefix='/game')
 app.register_blueprint(evaluate, url_prefix='/evaluate')
+app.register_blueprint(report, url_prefix='/report')
 
 
 @app.route('/login', methods=['get'])
