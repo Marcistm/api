@@ -24,33 +24,13 @@ def get_game_schedule(date):
         dic = {
             'gameId': games[i][2],
             'awayTeam': games[i][6],
-            'homeTeam': games[i+1][6],
+            'homeTeam': games[i + 1][6],
             'awayTeamScore': games[i][22] if games[i + 1][22] is not None else '',
-            'homeTeamScore': games[i+1][22] if games[i][22] is not None else '',
-            'gameTimeLTZ': games[i][0][:10]+' '+game_header[int(i/2)][4]
+            'homeTeamScore': games[i + 1][22] if games[i][22] is not None else '',
+            'gameTimeLTZ': games[i][0][:10] + ' ' + game_header[int(i / 2)][4]
         }
         data.append(dic)
     return data
-
-
-@game.route('/search1', methods=['get'])
-def search1():
-    board = scoreboard.ScoreBoard(proxy=proxy)
-    games = board.games.get_dict()
-    data = []
-    for game in games:
-        gameTimeLTZ = parser.parse(game["gameTimeUTC"]).replace(tzinfo=timezone.utc).astimezone(tz=None)
-        dic = {
-            'gameId': game['gameId'],
-            'awayTeam': game['awayTeam']['teamName'],
-            'homeTeam': game['homeTeam']['teamName'],
-            'awayTeamScore': game['awayTeam']['score'],
-            'homeTeamScore': game['homeTeam']['score'],
-            'gameTimeLTZ': gameTimeLTZ
-        }
-        data.append(dic)
-    print(data)
-    return jsonify(code=200, msg='success', data=data)
 
 
 @game.route('/search', methods=['get'])

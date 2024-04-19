@@ -21,23 +21,33 @@ def submit():
 @evaluate.route('/search', methods=['get'])
 def search():
     username = request.args.get('username')
-    sql = f"select * from evaluate where username='{username}'"
+    sql = "select * from evaluate where 1=1"
     start = request.args.get('start')
+    if username:
+        sql = sql + f" and username='{username}'"
     if start:
         end = request.args.get('end')
         end = (datetime.strptime(end, '%Y-%m-%d') + timedelta(days=1)).strftime('%Y-%m-%d')
         sql = sql + f" and time>='{start}' and time<='{end}'"
     con = UseMySQL()
     df = con.get_mssql_data(sql)
-    df['time'] = df['time'].dt.strftime('%Y-%m-%d %H:%M:%S')
     if df.empty:
         return jsonify(code=404, msg='error')
+    df['time'] = df['time'].dt.strftime('%Y-%m-%d %H:%M:%S')
     return jsonify(code=200, msg='success', data=df.fillna('').to_dict('records'))
 
 
-def stats_row(row, con):
-    sql = f"select category from evaluate_stats where evaluateId='{row['id']}'"
+def stats_row(row):
+    sql = f"select category,username from evaluate_stats where evaluateId='{row['id']}'"
+    con = UseMySQL()
     df = con.get_mssql_data(sql)
+    if not df.empty:
+        category_counts = df['category'].value_counts()
+        for category, count in category_counts.iteritems():
+            row[category] = count
+    sql = f"select count(*) count from evaluate_report where evaluateId='{row['id']}'"
+    df = con.get_mssql_data(sql)
+    row['report'] = df.iloc[0]['count']
     return row
 
 
@@ -48,6 +58,9 @@ def plater_comment_search():
     sql = f"select * from evaluate where gameId='{gameId}' and name='{name}'"
     con = UseMySQL()
     df = con.get_mssql_data(sql)
-    df.apply(stats_row, args=con, axis=1)
-    df['time'] = df['time'].dt.strftime('%Y-%m-%d %H:%M:%S')
+    df['like'] = 0
+    df['dislike'] = 0
+    df = df.apply(stats_row, axis=1)
+    if not df.empty:
+        df['time'] = df['time'].dt.strftime('%Y-%m-%d %H:%M:%S')
     return jsonify(code=200, msg='success', data=df.fillna('').to_dict('records'))

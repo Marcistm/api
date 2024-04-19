@@ -10,7 +10,9 @@ report = Blueprint('report', __name__)
 @report.route('/search', methods=['get'])
 def search():
     username = request.args.get('username')
-    sql = f"select * from evaluate_report where username='{username}'"
+    sql = f"select * from evaluate_report where 1=1"
+    if username:
+        sql = sql + f" and username='{username}'"
     start = request.args.get('start')
     if start:
         end = request.args.get('end')
@@ -18,7 +20,7 @@ def search():
         sql = sql + f" and time>='{start}' and time<='{end}'"
     con = UseMySQL()
     df = con.get_mssql_data(sql)
-    df['time'] = df['time'].dt.strftime('%Y-%m-%d %H:%M:%S')
     if df.empty:
         return jsonify(code=404, msg='error')
+    df['time'] = df['time'].dt.strftime('%Y-%m-%d %H:%M:%S')
     return jsonify(code=200, msg='success', data=df.fillna('').to_dict('records'))

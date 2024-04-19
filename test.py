@@ -1,30 +1,21 @@
-from datetime import datetime
-from nba_api.stats.endpoints import ScoreboardV2
+from nba_api.stats.endpoints import commonplayerinfo, playergamelog
 
 from config import proxy
 
 
-def get_game_schedule(date):
-    formatted_date = datetime.strftime(date, "%m/%d/%Y")
-    data = []
-    scoreboard = ScoreboardV2(game_date=formatted_date,proxy=proxy)
-    games = scoreboard.get_dict()['resultSets'][1]['rowSet']
-    for i in range(0,len(games),2):
-        dic = {
-            'gameId': games[i][2],
-            'awayTeam': games[i+1][6],
-            'homeTeam': games[i][6],
-            'awayTeamScore': games[i+1][18] if games[i+1][18] is not None else '',
-            'homeTeamScore': games[i][18] if games[i][18] is not None else '',
-            'gameTimeLTZ': games[i][0]
-        }
-        data.append(dic)
-    return data
+def get_player_game_logs(player_id, season):
+    # 使用 playergamelog endpoint 获取球员比赛数据
+    gamelog = playergamelog.PlayerGameLog(player_id=player_id, season=season,proxy=proxy)
+    gamelog_data = gamelog.get_data_frames()[0]
+
+    # 返回球员比赛数据
+    return gamelog_data
 
 
-# 指定要查询的日期
-date_to_query = datetime(2024, 4, 17)  # 示例日期，你需要替换为你要查询的日期
+# 指定要查询的球员ID和赛季
+player_id = 201939  # 以史蒂芬·库里为例
+season = '2023-24'  # 示例赛季，你需要根据实际情况修改
 
-# 获取指定日期的比赛赛程
-schedule = get_game_schedule(date_to_query)
-print(schedule)
+# 获取球员在指定赛季的比赛数据
+player_game_logs = get_player_game_logs(player_id, season)
+print(player_game_logs.columns)
