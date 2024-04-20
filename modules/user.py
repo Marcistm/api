@@ -43,7 +43,8 @@ def search():
     df = df.apply(stats_row, axis=1)
     return jsonify(code=200, msg='success', data=df.fillna('').to_dict('records'))
 
-@user.route('/register',methods=['get'])
+
+@user.route('/register', methods=['get'])
 @cross_origin(supports_credentials=True)
 def register():
     mssql_connect = UseMySQL()
@@ -51,9 +52,16 @@ def register():
     name = request.args.get('name')
     passwd = request.args.get('password')
     res_pass = my_md5(passwd, random_str)
-    sql = "select password, has_login, privilege, name " \
-          "from sys_user " \
-          f"where username = '{username}';"
-    df = mssql_connect.get_mssql_data(sql)
-    return jsonify(code=200, msg='success', has_login='1', token=generate_token(username),
-                       privilege='1',name=name)
+    sql = f"insert into sys_user(username,name,password) values('{username}','{name}','{res_pass}')"
+    df = mssql_connect.update_mssql_data(sql)
+    return jsonify(code=200, msg='success', token=generate_token(username),
+                   privilege='1', name=name)
+
+
+@user.route('/username/get', methods=['get'])
+def username_get():
+    con = UseMySQL()
+    sql = "select username from sys_user"
+    df = con.get_mssql_data(sql)
+    data = df['username'].tolist()
+    return jsonify(code=200, msg='success', data=data)

@@ -16,6 +16,54 @@
 /*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
 
 --
+-- Table structure for table `community`
+--
+
+DROP TABLE IF EXISTS `community`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `community` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `community_id_uindex` (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `community`
+--
+
+LOCK TABLES `community` WRITE;
+/*!40000 ALTER TABLE `community` DISABLE KEYS */;
+/*!40000 ALTER TABLE `community` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `community_user`
+--
+
+DROP TABLE IF EXISTS `community_user`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `community_user` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `username` varchar(20) DEFAULT NULL,
+  `community_id` int DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `community_user_id_uindex` (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `community_user`
+--
+
+LOCK TABLES `community_user` WRITE;
+/*!40000 ALTER TABLE `community_user` DISABLE KEYS */;
+/*!40000 ALTER TABLE `community_user` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
 -- Table structure for table `evaluate`
 --
 
@@ -30,6 +78,7 @@ CREATE TABLE `evaluate` (
   `rate` varchar(10) DEFAULT NULL,
   `comment` varchar(100) DEFAULT NULL,
   `time` datetime DEFAULT CURRENT_TIMESTAMP,
+  `parentId` int DEFAULT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `evaluate_id_uindex` (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
@@ -41,7 +90,7 @@ CREATE TABLE `evaluate` (
 
 LOCK TABLES `evaluate` WRITE;
 /*!40000 ALTER TABLE `evaluate` DISABLE KEYS */;
-INSERT INTO `evaluate` VALUES (1,'0022301171','test','Kelly Oubre Jr.','3','','2024-04-13 15:27:11'),(2,'0022301171','test','Kelly Oubre Jr.','3','ss','2024-04-13 15:27:31'),(3,'0022301171','test','De\'Anthony Melton','2','ss','2024-04-13 15:35:21');
+INSERT INTO `evaluate` VALUES (1,'0022301171','admin','Kelly Oubre Jr.','3','','2024-04-13 15:27:11',NULL),(2,'0022301171','admin','Kelly Oubre Jr.','3','ss','2024-04-13 15:27:31',NULL),(3,'0022301171','admin','De\'Anthony Melton','2','ss','2024-04-13 15:35:21',NULL);
 /*!40000 ALTER TABLE `evaluate` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -56,9 +105,11 @@ CREATE TABLE `evaluate_report` (
   `id` int NOT NULL AUTO_INCREMENT,
   `username` varchar(20) DEFAULT NULL,
   `evaluateId` varchar(10) DEFAULT NULL,
+  `comment` varchar(20) DEFAULT NULL,
+  `time` datetime DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   UNIQUE KEY `evaluate_report_id_uindex` (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -67,6 +118,7 @@ CREATE TABLE `evaluate_report` (
 
 LOCK TABLES `evaluate_report` WRITE;
 /*!40000 ALTER TABLE `evaluate_report` DISABLE KEYS */;
+INSERT INTO `evaluate_report` VALUES (1,'test','1','ccc','2024-04-18 16:34:16');
 /*!40000 ALTER TABLE `evaluate_report` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -84,7 +136,7 @@ CREATE TABLE `evaluate_stats` (
   `evaluateId` varchar(10) DEFAULT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `evaluate_stats_id_uindex` (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -93,6 +145,7 @@ CREATE TABLE `evaluate_stats` (
 
 LOCK TABLES `evaluate_stats` WRITE;
 /*!40000 ALTER TABLE `evaluate_stats` DISABLE KEYS */;
+INSERT INTO `evaluate_stats` VALUES (1,'test','like','1'),(2,'test','dislike','1');
 /*!40000 ALTER TABLE `evaluate_stats` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -107,12 +160,11 @@ CREATE TABLE `sys_user` (
   `id` int NOT NULL AUTO_INCREMENT,
   `password` varchar(40) DEFAULT '2b2786d75fe0463ed7a764532695dae0',
   `username` varchar(20) DEFAULT NULL,
-  `privilege` int DEFAULT NULL,
+  `privilege` int DEFAULT '1',
   `name` varchar(20) DEFAULT NULL,
-  `has_login` int DEFAULT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `sys_user_id_uindex` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -121,7 +173,7 @@ CREATE TABLE `sys_user` (
 
 LOCK TABLES `sys_user` WRITE;
 /*!40000 ALTER TABLE `sys_user` DISABLE KEYS */;
-INSERT INTO `sys_user` VALUES (1,'2b2786d75fe0463ed7a764532695dae0','test',2,'test',1),(2,'2b2786d75fe0463ed7a764532695dae0','admin',2,'admin',1);
+INSERT INTO `sys_user` VALUES (1,'2b2786d75fe0463ed7a764532695dae0','test',2,'test'),(2,'2b2786d75fe0463ed7a764532695dae0','admin',1,'admin'),(4,'6b838f174d21163a6854dbb7709c9402','ss',1,'ss');
 /*!40000 ALTER TABLE `sys_user` ENABLE KEYS */;
 UNLOCK TABLES;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
@@ -134,4 +186,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2024-04-17 16:54:25
+-- Dump completed on 2024-04-20 15:46:16

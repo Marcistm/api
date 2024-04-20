@@ -27,6 +27,7 @@ app.register_blueprint(user, url_prefix='/user')
 app.register_blueprint(team, url_prefix='/team')
 app.register_blueprint(player, url_prefix='/player')
 
+
 @app.route('/login', methods=['get'])
 @cross_origin(supports_credentials=True)
 def login():
@@ -34,7 +35,7 @@ def login():
     username = request.args.get('username')
     passwd = request.args.get('password')
     res_pass = my_md5(passwd, random_str)
-    sql = "select password, has_login, privilege, name " \
+    sql = "select password, privilege, name " \
           "from sys_user " \
           f"where username = '{username}';"
     df = mssql_connect.get_mssql_data(sql)
@@ -43,7 +44,7 @@ def login():
     res = df.to_dict('records')[0]
     passwd_db = res['password']
     if res_pass == passwd_db:
-        return jsonify(code=200, msg='success', has_login=res['has_login'], token=generate_token(username),
+        return jsonify(code=200, msg='success', token=generate_token(username),
                        privilege=res['privilege'],
                        name=res['name'])
     else:
@@ -55,8 +56,8 @@ def login():
 def change_passwd():
     mysql_connect = UseMySQL()
     data = json.loads(request.get_data())
-    sql = "update sys_user set password = '{}', has_login = {} where username = '{}';" \
-        .format(my_md5(str(data['password']), random_str), 1, data['username'])
+    sql = "update sys_user set password = '{}' where username = '{}';" \
+        .format(my_md5(str(data['password']), random_str), data['username'])
     df = mysql_connect.update_mssql_data(sql)
     if df == 'success':
         return jsonify(code=200, msg=df)
@@ -89,7 +90,6 @@ def write():
 @app.route('/save', methods=['post'])
 def save():
     val = json.loads(request.get_data())
-    print(val)
     sql = construct_update_statement(val['table'], val['row'])
     con = UseMySQL()
     df = con.update_mssql_data(sql)
