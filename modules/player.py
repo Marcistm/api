@@ -21,13 +21,22 @@ def get_player_season_average_stats(player_id):
     gamelog_data = gamelog.get_data_frames()[0]
     season_average_stats = gamelog_data.mean().round(1).to_dict()
     dict = {
-        'REB':season_average_stats['REB'],
+        'REB': season_average_stats['REB'],
         'BLK': season_average_stats['BLK'],
         'PTS': season_average_stats['PTS'],
         'STL': season_average_stats['STL'],
         'AST': season_average_stats['AST'],
     }
     return dict
+
+
+def get_top10_player_season_average():
+    gamelog = playergamelog.PlayerGameLog(proxy=proxy)
+    gamelog_data = gamelog.get_data_frames()[0]
+    # 根据球员分组，计算各项数据总和
+    grouped_data = gamelog_data.groupby('PLAYER_ID').mean().round(1).reset_index()
+    top_players = grouped_data.sort_values(by='PTS', ascending=False).head(10)
+    return top_players
 
 
 @player.route('/search/by/team', methods=['get'])
@@ -49,6 +58,14 @@ def season_avg():
     players = val['players']
     data = []
     for i in players:
-            player = get_player_season_average_stats(i)
-            data.append(player)
+        player = get_player_season_average_stats(i)
+        data.append(player)
     return jsonify(code=200, msg='success', data=data)
+
+
+@player.route('/top/10', methods=['get'])
+def top_10():
+    category = request.args.get('category')
+    top_10 = get_top10_player_season_average()
+    print(top_10)
+    return jsonify(code=200, msg='success')
