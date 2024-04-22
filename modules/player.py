@@ -3,7 +3,7 @@ import json
 import pandas as pd
 import requests
 from flask import Blueprint, request, jsonify
-from nba_api.stats.endpoints import LeagueStandings, CommonTeamRoster, playergamelog
+from nba_api.stats.endpoints import LeagueStandings, CommonTeamRoster, playergamelog, leagueleaders
 from nba_api.stats.static import players, teams
 
 from config import proxy
@@ -30,15 +30,6 @@ def get_player_season_average_stats(player_id):
     return dict
 
 
-def get_top10_player_season_average():
-    gamelog = playergamelog.PlayerGameLog(proxy=proxy)
-    gamelog_data = gamelog.get_data_frames()[0]
-    # 根据球员分组，计算各项数据总和
-    grouped_data = gamelog_data.groupby('PLAYER_ID').mean().round(1).reset_index()
-    top_players = grouped_data.sort_values(by='PTS', ascending=False).head(10)
-    return top_players
-
-
 @player.route('/search/by/team', methods=['get'])
 def search_by_team():
     team_id = request.args.get('team_id')
@@ -63,9 +54,11 @@ def season_avg():
     return jsonify(code=200, msg='success', data=data)
 
 
-@player.route('/top/10', methods=['get'])
-def top_10():
+@player.route('/top', methods=['get'])
+def top():
     category = request.args.get('category')
-    top_10 = get_top10_player_season_average()
-    print(top_10)
-    return jsonify(code=200, msg='success')
+    num = request.args.get('num')
+    leaders = leagueleaders.LeagueLeaders(proxy=proxy, stat_category_abbreviation=category)
+    leaders_data = leaders.get_data_frames()[0]
+    leaders_data = leaders_data.head(int(num))
+    return jsonify(code=200, msg='success', data=leaders_data.to_dict('records'))
